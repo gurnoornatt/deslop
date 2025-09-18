@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slop-ify Error Handling Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-results {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .warn { color: #ffc107; }
+        .info { color: #17a2b8; }
+
+        .linkedin-simulation {
+            border: 2px solid #0073b1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .post-content {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 8px 0;
+        }
+
+        .error-injection {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 5px 0;
+            color: #c53030;
+        }
+
+        button {
+            background: #0073b1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #005885;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-pass { background: #28a745; }
+        .status-fail { background: #dc3545; }
+        .status-pending { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Slop-ify Error Handling Test Suite</h1>
+    <p>This page tests the error handling and recovery mechanisms of the Slop-ify extension.</p>
+
+    <div class="test-section">
+        <h2>Test Control Panel</h2>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="runMalformedDOMTest()">📋 Test Malformed DOM</button>
+        <button onclick="runInvalidSelectorsTest()">🔍 Test Invalid Selectors</button>
+        <button onclick="runUIChangesTest()">🎨 Test UI Changes</button>
+        <button onclick="runPerformanceTest()">⚡ Test Performance</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testResults" class="test-results">
+            <p class="info">Click "Run All Tests" to start testing...</p>
+        </div>
+    </div>
+
+    <!-- LinkedIn UI Simulation Areas -->
+    <div class="test-section">
+        <h2>LinkedIn UI Simulation - Test Target Elements</h2>
+
+        <div class="linkedin-simulation">
+            <h3>Feed Posts (Primary Selectors)</h3>
+            <div class="feed-shared-update-v2__description">
+                <div class="update-components-text">This is a test LinkedIn post that should be replaced with "slop slop slop"</div>
+            </div>
+            <div class="feed-shared-text__text-view">Another post with different selector structure</div>
+        </div>
+
+        <div class="linkedin-simulation">
+            <h3>Comments (Fallback Selectors)</h3>
+            <div class="comments-comment-item__main-content">
+                <span class="break-words">This is a comment that should be replaced</span>
+            </div>
+            <div class="comment">
+                <p>Fallback comment selector test content</p>
+            </div>
+        </div>
+
+        <div class="linkedin-simulation">
+            <h3>Messages (Secondary Selectors)</h3>
+            <div class="msg-s-event-listitem__body">Direct message content for testing</div>
+            <div data-test-id="message-text">New style message with data attribute</div>
+        </div>
+
+        <div class="linkedin-simulation">
+            <h3>Profile Content</h3>
+            <div class="pv-about__summary-text">
+                <span class="break-words">Profile summary text that should be processed</span>
+            </div>
+            <div class="profile-section">
+                <p>Fallback profile content selector</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Injection Areas -->
+    <div class="test-section">
+        <h2>Error Injection Test Areas</h2>
+
+        <div class="error-injection" id="malformedElements">
+            <h4>Malformed Elements</h4>
+            <p>This area will be populated with malformed DOM elements during testing</p>
+        </div>
+
+        <div class="error-injection" id="invalidSelectors">
+            <h4>Invalid Selectors Test</h4>
+            <p>Testing extension behavior with invalid CSS selectors</p>
+        </div>
+
+        <div class="error-injection" id="performanceTest">
+            <h4>Performance Stress Test</h4>
+            <p>Large DOM structure will be created here to test performance under stress</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Real-time Error Statistics</h2>
+        <div id="errorStats" class="test-results">
+            <p>Error statistics will appear here...</p>
+        </div>
+    </div>
+
+    <!-- Include our test suite -->
+    <script src="test-error-handling.js"></script>
+
+    <script>
+        let testResults = [];
+        let testSuite = null;
+
+        // Initialize test suite when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            testSuite = new ErrorHandlingTestSuite();
+            updateDisplay('Test suite initialized. Ready to run tests.');
+        });
+
+        function updateDisplay(message) {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML += `<div class="info">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateErrorStats() {
+            // If we have access to the extension's error stats, display them
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                    chrome.tabs.sendMessage(tabs[0].id, {type: 'getErrorStats'}, function(response) {
+                        if (response && response.status === 'success') {
+                            const statsDiv = document.getElementById('errorStats');
+                            statsDiv.innerHTML = `
+                                <h4>Extension Error Statistics</h4>
+                                <p><span class="status-indicator ${response.debugMode ? 'status-pass' : 'status-pending'}"></span>Debug Mode: ${response.debugMode ? 'ON' : 'OFF'}</p>
+                                <p>Selector Errors: ${response.errorStats.selectorErrors}</p>
+                                <p>DOM Errors: ${response.errorStats.domErrors}</p>
+                                <p>Replacement Errors: ${response.errorStats.replacementErrors}</p>
+                                <p>Recovered Errors: ${response.errorStats.recoveredErrors}</p>
+                                <p>Total Replacements: ${response.totalReplacements}</p>
+                            `;
+                        }
+                    });
+                });
+            }
+        }
+
+        async function runAllTests() {
+            if (!testSuite) {
+                updateDisplay('❌ Test suite not initialized');
+                return;
+            }
+
+            updateDisplay('🚀 Starting comprehensive error handling tests...');
+            clearResults();
+
+            try {
+                await testSuite.runAllTests();
+                updateDisplay('✅ All tests completed');
+                displayTestResults(testSuite.testResults);
+            } catch (error) {
+                updateDisplay(`❌ Test suite failed: ${error.message}`);
+            }
+
+            updateErrorStats();
+        }
+
+        async function runMalformedDOMTest() {
+            updateDisplay('📋 Running malformed DOM test...');
+            await testSuite.testMalformedDOM();
+            displayTestResults(testSuite.testResults.filter(r => r.test === 'Malformed DOM'));
+        }
+
+        async function runInvalidSelectorsTest() {
+            updateDisplay('🔍 Running invalid selectors test...');
+            await testSuite.testInvalidSelectors();
+            displayTestResults(testSuite.testResults.filter(r => r.test === 'Invalid Selectors'));
+        }
+
+        async function runUIChangesTest() {
+            updateDisplay('🎨 Running UI changes test...');
+            await testSuite.testLinkedInUIChanges();
+            displayTestResults(testSuite.testResults.filter(r => r.test === 'LinkedIn UI Changes'));
+        }
+
+        async function runPerformanceTest() {
+            updateDisplay('⚡ Running performance test...');
+            await testSuite.testPerformanceUnderStress();
+            displayTestResults(testSuite.testResults.filter(r => r.test === 'Performance Under Stress'));
+        }
+
+        function displayTestResults(results) {
+            const resultsDiv = document.getElementById('testResults');
+
+            results.forEach(result => {
+                const statusClass = result.passed ? 'pass' : 'fail';
+                const statusIcon = result.passed ? '✅' : '❌';
+
+                resultsDiv.innerHTML += `
+                    <div class="${statusClass}">
+                        ${statusIcon} ${result.test} - ${result.case}: ${result.passed ? 'PASSED' : 'FAILED'}
+                        ${result.error ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;Error: ${result.error}` : ''}
+                        ${result.processingTime ? `<br>&nbsp;&nbsp;&nbsp;&nbsp;Processing Time: ${result.processingTime}` : ''}
+                    </div>
+                `;
+            });
+
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '<p class="info">Test results cleared.</p>';
+            if (testSuite) {
+                testSuite.testResults = [];
+            }
+        }
+
+        // Auto-update error stats every 5 seconds
+        setInterval(updateErrorStats, 5000);
+
+        // Initial error stats update
+        setTimeout(updateErrorStats, 1000);
+
+        console.log('🧪 Error Handling Test Page Loaded');
+        console.log('📋 Available test functions:');
+        console.log('  - runAllTests()');
+        console.log('  - runMalformedDOMTest()');
+        console.log('  - runInvalidSelectorsTest()');
+        console.log('  - runUIChangesTest()');
+        console.log('  - runPerformanceTest()');
+    </script>
+</body>
+</html>
