@@ -5,20 +5,21 @@
 [![Manifest](https://img.shields.io/badge/manifest-v3-green.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-orange.svg)](https://chrome.google.com/webstore/)
 
-A Chrome extension that replaces LinkedIn post and message text with "slop slop slop" for a cleaner, more mindful social media experience.
+A Chrome extension that replaces LinkedIn text with "slop slop slop" - featuring AI detection, user controls, and complete privacy protection.
 
 ## 📖 Overview
 
-Slop-ify is a lightweight, privacy-focused Chrome extension designed to help users reduce information overload on LinkedIn. By replacing all post and message text with the phrase "slop slop slop", it creates a visual barrier that encourages more intentional browsing and helps users focus on what truly matters.
+Slop-ify is a lightweight, privacy-focused Chrome extension designed to help users reduce information overload on LinkedIn. It offers smart AI detection to target only AI-generated content, or can replace all text for complete digital wellness. Perfect for maintaining professional network access while avoiding doom-scrolling.
 
 ### ✨ Key Features
 
-- **🔄 Real-time Text Replacement**: Instantly replaces LinkedIn post and message content
-- **🎯 Dynamic Content Support**: Uses MutationObserver to handle content loaded via scrolling
-- **🔒 Privacy-First**: Client-side only - no data collection or external servers
-- **⚡ Lightweight**: Minimal resource usage with efficient DOM manipulation
-- **🛠️ Professional UI**: Clean popup interface with extension controls
-- **📱 Responsive**: Works across different LinkedIn page layouts
+- **🧠 Smart AI Detection**: Optionally target only AI-generated content using local pattern analysis
+- **🎛️ Complete User Control**: Enable/disable extension with easy toggle controls
+- **📊 Slop Meter**: Track how many words you've "slopped"
+- **🔄 Real-time Processing**: Instantly processes content as you scroll
+- **🔒 Privacy-First**: Zero data collection, all processing happens locally
+- **⚡ Lightweight**: Minimal resource usage with efficient algorithms
+- **🛠️ Professional UI**: Clean popup interface with intuitive controls
 
 ## 📥 Installation
 
@@ -58,10 +59,12 @@ Slop-ify is a lightweight, privacy-focused Chrome extension designed to help use
 
 Click the Slop-ify icon in your Chrome toolbar to access:
 
+- **Enable Slop-ify**: Master on/off toggle for the entire extension
+- **AI Detection Only**: Toggle between targeting AI content vs all text
+- **AI Confidence Threshold**: Adjust sensitivity (50-90%) for AI detection
+- **🥄 Slop Meter**: View total words replaced
 - **Test Extension**: Verify functionality on current page
 - **Rescan Page**: Manually trigger content replacement
-- **Debug Info**: View technical information and logs
-- **Settings**: Configure extension behavior (future feature)
 
 ### What Gets Replaced
 
