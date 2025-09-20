@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+production-clean/
+*.zip
+
+# Testing
+coverage/
+tests/
+test-*.js
+test-*.html
+
+# Development tools
+.eslintrc.json
+jest.config.js
+playwright.config.js
+
+# Temporary files
+.DS_Store
+*.log
+*.tmp
+
+# Development documentation (keep main docs)
+*-debug.md
+API_VERIFICATION_REPORT.md
+LLM_JUDGE_EVALUATION.md
+SAPLING_API_INTEGRATION_REPORT.md
+TEST-REPORT.md
+extension-debug.md
+
+# Development scripts
+validate-extension.js
+security-audit.js
+api-test.js
+pattern-test.js
+demo-test.js
+test-ai-detection.js
+test-api-integration.js
+
+# Chrome Web Store package
+chrome-web-store-package/
+
+# Development files
+content-optimized.js
+selector-cache.js
+promo-image.html
+test-word-count.html
+
+# Scripts (keep production ones)
+clean-production-files.sh
+create-production-package.sh
+
+# Playwright screenshots
+.playwright-mcp/
+
+# TaskMaster
+.taskmaster/
+
+# Claude AI
+.claude/
+
+# Development configs
+PRD.md
+STATUS.md
