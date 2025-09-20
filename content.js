@@ -1,9 +1,15 @@
 // Slop-ify Content Script
 // This script runs on LinkedIn pages to replace text with "slop slop slop"
 
+console.log('🚀 Slop-ify Content Script Loading...', {
+    url: window.location.href,
+    timestamp: new Date().toISOString(),
+    readyState: document.readyState
+});
+
 // Enhanced Error Handling and Logging System
 let debugMode = false;
-let errorStats = {
+const errorStats = {
     selectorErrors: 0,
     domErrors: 0,
     replacementErrors: 0,
@@ -36,9 +42,13 @@ const Logger = {
         console.error('[Slop-ify ERROR]', errorData);
 
         // Update error statistics
-        if (context.includes('selector')) errorStats.selectorErrors++;
-        else if (context.includes('dom')) errorStats.domErrors++;
-        else if (context.includes('replacement')) errorStats.replacementErrors++;
+        if (context.includes('selector')) {
+            errorStats.selectorErrors++;
+        } else if (context.includes('dom')) {
+            errorStats.domErrors++;
+        } else if (context.includes('replacement')) {
+            errorStats.replacementErrors++;
+        }
 
         return errorData;
     }
@@ -53,9 +63,11 @@ const SafeDOM = {
             if (!selector || typeof selector !== 'string') {
                 throw new Error(`Invalid selector: ${selector}`);
             }
+
             return root.querySelector(selector);
         } catch (error) {
             Logger.logError('safe-dom-querySelector', error, { selector, rootType: root.constructor.name });
+
             return null;
         }
     },
@@ -65,9 +77,11 @@ const SafeDOM = {
             if (!selector || typeof selector !== 'string') {
                 throw new Error(`Invalid selector: ${selector}`);
             }
+
             return Array.from(root.querySelectorAll(selector));
         } catch (error) {
             Logger.logError('safe-dom-querySelectorAll', error, { selector, rootType: root.constructor.name });
+
             return [];
         }
     },
@@ -84,9 +98,11 @@ const SafeDOM = {
             if (!SafeDOM.isValidElement(element)) {
                 return null;
             }
+
             return element.textContent;
         } catch (error) {
             Logger.logError('safe-dom-textContent', error, { elementTag: element?.tagName });
+
             return null;
         }
     },
@@ -97,9 +113,11 @@ const SafeDOM = {
                 return false;
             }
             element.textContent = text;
+
             return true;
         } catch (error) {
             Logger.logError('safe-dom-setTextContent', error, { elementTag: element?.tagName, text });
+
             return false;
         }
     }
@@ -109,6 +127,8 @@ const SafeDOM = {
 async function initializeDebugMode() {
     try {
         const result = await chrome.storage.local.get(['debugMode']);
+
+
         debugMode = result.debugMode || false;
         Logger.debug('Debug mode initialized:', debugMode);
     } catch (error) {
@@ -118,7 +138,7 @@ async function initializeDebugMode() {
 
 // Error boundary wrapper for all major functions
 function withErrorBoundary(fn, context) {
-    return function(...args) {
+    return function (...args) {
         try {
             return fn.apply(this, args);
         } catch (error) {
@@ -127,12 +147,43 @@ function withErrorBoundary(fn, context) {
                 argsCount: args.length
             });
             errorStats.recoveredErrors++;
+
             return null; // Safe fallback
         }
     };
 }
 
 console.log('Slop-ify content script loaded on:', window.location.href);
+
+// Initialize AI Detector instance
+let aiDetector = null;
+let aiDetectionEnabled = true;
+
+// Initialize AI detector when script loads
+async function initializeAIDetector() {
+    try {
+        // Check if we should use AI detection
+        const result = await chrome.storage.local.get(['aiDetectionEnabled']);
+        aiDetectionEnabled = result.aiDetectionEnabled !== false; // Default to enabled
+
+        if (aiDetectionEnabled && typeof AIDetector !== 'undefined') {
+            aiDetector = new AIDetector();
+            Logger.info('AI Detection initialized successfully');
+        } else if (aiDetectionEnabled) {
+            Logger.warn('AIDetector class not available, will replace all text');
+        } else {
+            Logger.info('AI Detection disabled, will replace all text');
+        }
+    } catch (error) {
+        Logger.warn('Failed to initialize AI detection:', error.message);
+        aiDetectionEnabled = false;
+    }
+}
+
+// Check if AI detector is available
+function isAIDetectorAvailable() {
+    return typeof AIDetector !== 'undefined';
+}
 
 // Enhanced Configuration with Fallback Selectors and Priority Levels
 const LINKEDIN_SELECTORS = {
@@ -222,8 +273,11 @@ const SelectorResolver = {
      */
     getAllSelectors: (category) => {
         const categorySelectors = LINKEDIN_SELECTORS[category];
+
+
         if (!categorySelectors) {
             Logger.warn(`Unknown selector category: ${category}`);
+
             return [];
         }
 
@@ -240,9 +294,11 @@ const SelectorResolver = {
     isValidSelector: (selector) => {
         try {
             document.querySelector(selector);
+
             return true;
         } catch (error) {
             Logger.debug(`Invalid selector detected: ${selector}`, error.message);
+
             return false;
         }
     },
@@ -252,8 +308,8 @@ const SelectorResolver = {
      */
     findElements: (category, root = document) => {
         const allSelectors = SelectorResolver.getAllSelectors(category);
-        let foundElements = [];
-        let successfulSelectors = [];
+        const foundElements = [];
+        const successfulSelectors = [];
 
         for (const selector of allSelectors) {
             if (!SelectorResolver.isValidSelector(selector)) {
@@ -262,6 +318,8 @@ const SelectorResolver = {
 
             try {
                 const elements = SafeDOM.querySelectorAll(selector, root);
+
+
                 if (elements.length > 0) {
                     foundElements.push(...elements);
                     successfulSelectors.push(selector);
@@ -302,12 +360,39 @@ const performance = {
 };
 
 /**
- * Enhanced secure text replacement function with comprehensive error handling
+ * Generate replacement text with matching word count
+ * @param {string} originalText - The original text to analyze
+ * @returns {string} - "slop" repeated for each word in original text
+ */
+function generateSlopReplacement(originalText) {
+    console.log('🔍 generateSlopReplacement called with:', originalText);
+
+    if (!originalText || typeof originalText !== 'string') {
+        console.log('❌ Using fallback: invalid text');
+        return 'slop slop slop'; // Default fallback
+    }
+
+    // Count words by splitting on whitespace and filtering out empty strings
+    const words = originalText.trim().split(/\s+/).filter(word => word.length > 0);
+    const wordCount = words.length;
+
+    // Ensure we have at least 1 slop, maximum of 20 to prevent UI issues
+    const slopCount = Math.max(1, Math.min(wordCount, 20));
+
+    // Generate the appropriate number of "slop"s
+    const result = Array(slopCount).fill('slop').join(' ');
+    console.log(`✅ Generated ${slopCount} slops for ${wordCount} words: "${result}"`);
+
+    return result;
+}
+
+/**
+ * Enhanced secure text replacement function with AI detection and comprehensive error handling
  * @param {Element} element - The DOM element to process
- * @param {string} replacementText - The text to replace with ("slop slop slop")
+ * @param {string} customReplacementText - Optional custom replacement text (uses dynamic generation if not provided)
  * @returns {Object} - Detailed result object with success status and metrics
  */
-function replaceTextContent(element, replacementText = 'slop slop slop') {
+async function replaceTextContent(element, customReplacementText = null) {
     const result = {
         success: false,
         reason: null,
@@ -317,6 +402,14 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
     };
 
     try {
+        // Check if extension is enabled
+        const settings = await chrome.storage.local.get(['enabled']);
+        if (settings.enabled === false) {
+            result.reason = 'extension_disabled';
+            Logger.debug('Extension is disabled, skipping replacement');
+            return result;
+        }
+
         // Comprehensive element validation
         if (!SafeDOM.isValidElement(element)) {
             result.reason = 'invalid_element';
@@ -325,6 +418,7 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
                 nodeType: element?.nodeType,
                 isConnected: element?.isConnected
             });
+
             return result;
         }
 
@@ -332,18 +426,24 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
         if (performance.processedElements.has(element)) {
             result.reason = 'already_processed';
             Logger.debug('Element already processed, skipping');
+
             return result;
         }
 
         // Safe text content access with validation
         const originalText = SafeDOM.safeTextContentAccess(element);
+
+
         if (!originalText) {
             result.reason = 'no_text_content';
             Logger.debug('No text content available for element');
+
             return result;
         }
 
         const trimmedText = originalText.trim();
+
+
         result.originalText = trimmedText;
 
         // Content validation checks
@@ -353,10 +453,59 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
             return result;
         }
 
+        // AI Detection Logic - Only replace AI-generated content
+        if (aiDetectionEnabled && aiDetector && trimmedText.length >= 50) {
+            try {
+                const aiAnalysis = await aiDetector.detectAI(trimmedText);
+
+                if (!aiAnalysis.isAI) {
+                    result.reason = 'human_content';
+                    result.aiAnalysis = aiAnalysis;
+                    console.log(`✅ Human content detected (${Math.round((1-aiAnalysis.confidence)*100)}% confidence, ${aiAnalysis.method}): "${trimmedText.substring(0, 50)}..."`);
+                    Logger.debug('Skipping human content:', {
+                        confidence: aiAnalysis.confidence,
+                        method: aiAnalysis.method,
+                        text: trimmedText.substring(0, 100)
+                    });
+                    return result;
+                }
+
+                // Log AI detection
+                console.log(`🤖 AI content detected (${Math.round(aiAnalysis.confidence*100)}% confidence, ${aiAnalysis.method}): "${trimmedText.substring(0, 50)}..."`);
+                Logger.debug('AI content detected, proceeding with replacement:', {
+                    confidence: aiAnalysis.confidence,
+                    method: aiAnalysis.method,
+                    details: aiAnalysis.details
+                });
+
+                result.aiAnalysis = aiAnalysis;
+            } catch (error) {
+                Logger.warn('AI detection failed, proceeding with replacement:', error.message);
+                // Continue with replacement if AI detection fails
+            }
+        } else if (aiDetectionEnabled && !aiDetector) {
+            Logger.debug('AI detector not available, replacing all text');
+        } else if (!aiDetectionEnabled) {
+            Logger.debug('AI detection disabled, replacing all text');
+        } else {
+            Logger.debug('Text too short for AI detection, replacing anyway');
+        }
+
+        // Generate dynamic replacement text based on word count (unless custom text provided)
+        const replacementText = customReplacementText || generateSlopReplacement(trimmedText);
+
+        // Log word count matching for debugging (using console.log for visibility)
+        if (!customReplacementText) {
+            const originalWordCount = trimmedText.trim().split(/\s+/).filter(word => word.length > 0).length;
+            const slopWordCount = replacementText.split(' ').length;
+            console.log(`🥄 SLOP-IFY WORD COUNT: "${trimmedText}" (${originalWordCount} words) -> "${replacementText}" (${slopWordCount} slops)`);
+        }
+
         // Avoid replacing our own replacement text
-        if (trimmedText === replacementText) {
+        if (trimmedText === replacementText || trimmedText.includes('slop')) {
             result.reason = 'already_replaced';
             Logger.debug('Text already contains replacement text');
+
             return result;
         }
 
@@ -373,22 +522,30 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
 
         // Skip if element appears to be UI/navigation content
         const protectedPatterns = /nav|menu|button|toolbar|breadcrumb|search|filter/i;
+
+
         if (protectedPatterns.test(elementInfo.className + ' ' + elementInfo.role + ' ' + elementInfo.ariaLabel)) {
             result.reason = 'protected_content';
             Logger.debug('Skipping protected UI element:', elementInfo);
+
             return result;
         }
 
         // Perform safe text replacement
         const replacementSuccess = SafeDOM.safeTextContentSet(element, replacementText);
+
+
         if (!replacementSuccess) {
             result.reason = 'replacement_failed';
             result.error = 'SafeDOM.safeTextContentSet returned false';
+
             return result;
         }
 
         // Verify replacement was successful
         const verificationText = SafeDOM.safeTextContentAccess(element);
+
+
         if (verificationText !== replacementText) {
             result.reason = 'verification_failed';
             result.error = `Expected "${replacementText}", got "${verificationText}"`;
@@ -397,6 +554,7 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
                 actual: verificationText,
                 element: elementInfo
             });
+
             return result;
         }
 
@@ -424,6 +582,7 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
             originalText: result.originalText
         });
         errorStats.replacementErrors++;
+
         return result;
     }
 }
@@ -433,7 +592,7 @@ function replaceTextContent(element, replacementText = 'slop slop slop') {
  * @param {Element} rootElement - Root element to search within (default: document)
  * @returns {Object} - Detailed results with metrics and error information
  */
-function scanAndReplace(rootElement = document) {
+async function scanAndReplace(rootElement = document) {
     performance.start('scanAndReplace');
 
     const results = {
@@ -490,7 +649,7 @@ function scanAndReplace(rootElement = document) {
                     results.totalProcessed++;
 
                     try {
-                        const replacementResult = replaceTextContent(element);
+                        const replacementResult = await replaceTextContent(element);
 
                         if (replacementResult.success) {
                             categoryResult.replacements++;
@@ -573,13 +732,14 @@ function scanAndReplace(rootElement = document) {
     }
 
     performance.end('scanAndReplace');
+
     return results;
 }
 
 /**
- * Enhanced script injection test with comprehensive error handling
+ * Main initialization function with enabled state check and automatic replacement
  */
-const testContentScriptInjection = withErrorBoundary(async function() {
+const initializeExtension = withErrorBoundary(async function () {
     Logger.info('Content script successfully injected');
     Logger.debug('DOM ready state:', document.readyState);
     Logger.debug('Page title:', document.title);
@@ -588,12 +748,39 @@ const testContentScriptInjection = withErrorBoundary(async function() {
     // Initialize debug mode from storage
     await initializeDebugMode();
 
+    // Initialize AI detector
+    try {
+        if (isAIDetectorAvailable()) {
+            await initializeAIDetector();
+        } else {
+            Logger.warn('AIDetector not available, will replace all text');
+            aiDetectionEnabled = false;
+        }
+    } catch (error) {
+        Logger.warn('Failed to initialize AI detector, will replace all text:', error.message);
+        aiDetectionEnabled = false;
+    }
+
+    // Check if extension is enabled (default to true if not set)
+    let extensionEnabled = true;
+
+    try {
+        const result = await chrome.storage.local.get(['enabled']);
+
+        extensionEnabled = result.enabled !== false; // Default to enabled if not explicitly disabled
+        Logger.info('Extension enabled state:', extensionEnabled);
+    } catch (error) {
+        Logger.warn('Could not check enabled state, defaulting to enabled:', error.message);
+    }
+
     // Check if we're on LinkedIn with enhanced validation
     const isLinkedIn = window.location.hostname.includes('linkedin.com');
+
     Logger.debug('LinkedIn detection:', {
         hostname: window.location.hostname,
         isLinkedIn,
-        pathname: window.location.pathname
+        pathname: window.location.pathname,
+        extensionEnabled
     });
 
     if (!isLinkedIn) {
@@ -601,7 +788,12 @@ const testContentScriptInjection = withErrorBoundary(async function() {
         return;
     }
 
-    Logger.info('Confirmed we are on LinkedIn');
+    if (!extensionEnabled) {
+        Logger.info('Extension is disabled, skipping text replacement');
+        return;
+    }
+
+    Logger.info('Confirmed we are on LinkedIn and extension is enabled');
 
     // Enhanced LinkedIn container detection with fallbacks
     const containerSelectors = [
@@ -615,6 +807,7 @@ const testContentScriptInjection = withErrorBoundary(async function() {
     ];
 
     let feedContainer = null;
+
     for (const selector of containerSelectors) {
         try {
             feedContainer = SafeDOM.querySelector(selector);
@@ -630,13 +823,14 @@ const testContentScriptInjection = withErrorBoundary(async function() {
     if (!feedContainer) {
         Logger.warn('Could not find LinkedIn container, attempting scan anyway');
     } else {
-        Logger.info('LinkedIn container found, starting text replacement...');
+        Logger.info('LinkedIn container found, starting automatic text replacement...');
     }
 
-    // Perform initial scan and replace with enhanced error handling
+    // Perform initial scan and replace immediately on page load
     try {
-        const results = scanAndReplace();
-        Logger.info('Initial scan complete:', {
+        const results = await scanAndReplace();
+
+        Logger.info('Initial automatic scan complete:', {
             processed: results.totalProcessed,
             successful: results.successfulReplacements,
             failed: results.failedReplacements,
@@ -646,20 +840,25 @@ const testContentScriptInjection = withErrorBoundary(async function() {
 
         // Report any errors found during scanning
         if (results.errors.length > 0) {
-            Logger.warn(`Scan completed with ${results.errors.length} errors:`, results.errors);
+            Logger.warn(`Initial scan completed with ${results.errors.length} errors:`, results.errors);
         }
-
-    } catch (scanError) {
-        Logger.logError('initial-scan', scanError, {
-            containerFound: !!feedContainer,
-            readyState: document.readyState
-        });
+    } catch (error) {
+        Logger.logError('initial-scan', error);
     }
 
-    // Set up error monitoring and recovery
+    // Set up MutationObserver immediately to catch dynamic content
+    const observerSetup = setupMutationObserver();
+    if (observerSetup) {
+        Logger.info('MutationObserver set up successfully for dynamic content detection');
+    } else {
+        Logger.warn('Failed to set up MutationObserver');
+    }
+
+    // Set up error monitoring for better debugging
     setupErrorMonitoring();
 
-}, 'test-content-script-injection');
+    Logger.info('Extension initialization complete and active');
+}, 'extension-initialization');
 
 /**
  * Set up global error monitoring for the content script
@@ -689,12 +888,51 @@ function setupErrorMonitoring() {
     Logger.debug('Error monitoring set up successfully');
 }
 
-// Run test when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', testContentScriptInjection);
-} else {
-    testContentScriptInjection();
+// Enhanced initialization with multiple triggers
+function ensureInitialization() {
+    console.log('🚀 Slop-ify: Ensuring initialization...');
+
+    // Always call initialization - it has its own enabled checks
+    initializeExtension();
 }
+
+// Initialize extension when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureInitialization);
+} else {
+    ensureInitialization();
+}
+
+// Additional triggers for single-page app navigation (LinkedIn uses SPA)
+let lastUrl = window.location.href;
+function checkForNavigationChange() {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+        console.log('🔄 Slop-ify: Navigation detected:', lastUrl, '->', currentUrl);
+        lastUrl = currentUrl;
+
+        // Delay initialization to allow new content to load
+        setTimeout(() => {
+            console.log('🔄 Slop-ify: Re-initializing after navigation...');
+            ensureInitialization();
+        }, 500);
+    }
+}
+
+// Set up navigation detection
+setInterval(checkForNavigationChange, 1000); // Check every second for URL changes
+
+// Listen for browser navigation events
+window.addEventListener('popstate', () => {
+    console.log('🔄 Slop-ify: Popstate event detected');
+    setTimeout(ensureInitialization, 300);
+});
+
+// Listen for focus events (when returning to tab)
+window.addEventListener('focus', () => {
+    console.log('🔄 Slop-ify: Window focus detected');
+    setTimeout(ensureInitialization, 100);
+});
 
 // MutationObserver for dynamic content detection
 let mutationObserver = null;
@@ -711,20 +949,34 @@ function handleMutations(mutations) {
     }
 
     // Debounce rapid changes for performance (100ms as per requirements)
-    debounceTimer = setTimeout(() => {
+    debounceTimer = setTimeout(async () => {
+        // Check if extension is enabled before processing mutations
+        try {
+            const result = await chrome.storage.local.get(['enabled']);
+            const isEnabled = result.enabled !== false; // Default to enabled if not set
+
+            if (!isEnabled) {
+                Logger.debug('Extension disabled, skipping mutation processing');
+                return;
+            }
+        } catch (error) {
+            Logger.warn('Could not check enabled state in mutations, proceeding anyway:', error.message);
+        }
+
         performance.start('handleMutations');
         let newElementsProcessed = 0;
 
         for (const mutation of mutations) {
             if (mutation.type === 'childList') {
                 // Process newly added nodes
-                mutation.addedNodes.forEach(node => {
+                for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         // Scan the new element and its children
-                        const processed = scanAndReplace(node);
-                        newElementsProcessed += processed;
+                        const results = await scanAndReplace(node);
+
+                        newElementsProcessed += results.successfulReplacements;
                     }
-                });
+                }
             }
         }
 
@@ -765,9 +1017,11 @@ function setupMutationObserver() {
         mutationObserver.observe(targetNode, observerConfig);
 
         console.log('Slop-ify: MutationObserver set up successfully, watching for dynamic content');
+
         return true;
     } catch (error) {
         console.error('Slop-ify: Error setting up MutationObserver:', error);
+
         return false;
     }
 }
@@ -790,13 +1044,20 @@ function cleanup() {
 window.addEventListener('beforeunload', cleanup);
 window.addEventListener('pagehide', cleanup);
 
-// Additional test when window loads completely
+// Additional initialization when window loads completely
 window.addEventListener('load', () => {
-    console.log('Slop-ify: Window fully loaded, running additional checks');
-    testContentScriptInjection();
+    console.log('🚀 Slop-ify: Window fully loaded, ensuring extension is active');
 
-    // Set up MutationObserver after initial load
-    setupMutationObserver();
+    // Always re-initialize on window load for safety
+    setTimeout(ensureInitialization, 100);
+});
+
+// Handle document visibility changes (tab switching)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log('🔄 Slop-ify: Tab became visible, re-initializing...');
+        setTimeout(ensureInitialization, 200);
+    }
 });
 
 // Enhanced message handling with error recovery and debug support
@@ -805,66 +1066,106 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     try {
         switch (request.type) {
-            case 'ping':
-                sendResponse({
-                    status: 'pong',
-                    timestamp: Date.now(),
-                    debugMode,
-                    errorStats: { ...errorStats }
-                });
-                break;
+        case 'ping':
+            sendResponse({
+                status: 'pong',
+                timestamp: Date.now(),
+                debugMode,
+                errorStats: { ...errorStats }
+            });
+            break;
 
-            case 'toggleDebug':
-                toggleDebugMode().then((newDebugMode) => {
-                    sendResponse({
-                        status: 'success',
-                        debugMode: newDebugMode,
-                        message: `Debug mode ${newDebugMode ? 'enabled' : 'disabled'}`
-                    });
-                }).catch((error) => {
-                    Logger.logError('toggle-debug', error);
-                    sendResponse({
-                        status: 'error',
-                        message: 'Failed to toggle debug mode: ' + error.message
-                    });
-                });
-                break;
-
-            case 'getErrorStats':
+        case 'toggleDebug':
+            toggleDebugMode().then((newDebugMode) => {
                 sendResponse({
                     status: 'success',
-                    errorStats: { ...errorStats },
-                    debugMode,
-                    totalReplacements: performance.replacementCount
+                    debugMode: newDebugMode,
+                    message: `Debug mode ${newDebugMode ? 'enabled' : 'disabled'}`
                 });
-                break;
-
-            case 'test':
-                handleTestRequest().then(sendResponse).catch((error) => {
-                    Logger.logError('test-request', error);
-                    sendResponse({
-                        status: 'error',
-                        message: 'Test failed: ' + error.message
-                    });
-                });
-                break;
-
-            case 'rescan':
-                handleRescanRequest().then(sendResponse).catch((error) => {
-                    Logger.logError('rescan-request', error);
-                    sendResponse({
-                        status: 'error',
-                        message: 'Rescan failed: ' + error.message
-                    });
-                });
-                break;
-
-            default:
-                Logger.warn(`Unknown message type: ${request.type}`);
+            }).catch((error) => {
+                Logger.logError('toggle-debug', error);
                 sendResponse({
                     status: 'error',
-                    message: `Unknown message type: ${request.type}`
+                    message: 'Failed to toggle debug mode: ' + error.message
                 });
+            });
+            break;
+
+        case 'getErrorStats':
+            sendResponse({
+                status: 'success',
+                errorStats: { ...errorStats },
+                debugMode,
+                totalReplacements: performance.replacementCount
+            });
+            break;
+
+        case 'test':
+            handleTestRequest().then(sendResponse).catch((error) => {
+                Logger.logError('test-request', error);
+                sendResponse({
+                    status: 'error',
+                    message: 'Test failed: ' + error.message
+                });
+            });
+            break;
+
+        case 'rescan':
+            handleRescanRequest().then(sendResponse).catch((error) => {
+                Logger.logError('rescan-request', error);
+                sendResponse({
+                    status: 'error',
+                    message: 'Rescan failed: ' + error.message
+                });
+            });
+            break;
+
+        case 'toggle':
+            handleToggleRequest().then(sendResponse).catch((error) => {
+                Logger.logError('toggle-request', error);
+                sendResponse({
+                    status: 'error',
+                    message: 'Toggle failed: ' + error.message
+                });
+            });
+            break;
+
+        case 'getAIStats':
+            handleGetAIStatsRequest().then(sendResponse).catch((error) => {
+                Logger.logError('get-ai-stats-request', error);
+                sendResponse({
+                    status: 'error',
+                    message: 'Get AI stats failed: ' + error.message
+                });
+            });
+            break;
+
+        case 'clearCache':
+            handleClearCacheRequest().then(sendResponse).catch((error) => {
+                Logger.logError('clear-cache-request', error);
+                sendResponse({
+                    status: 'error',
+                    message: 'Clear cache failed: ' + error.message
+                });
+            });
+            break;
+
+        case 'getStats':
+            // Return simple replacement statistics
+            sendResponse({
+                status: 'success',
+                totalReplacements: performance.replacementCount || 0,
+                debugMode,
+                timestamp: Date.now()
+            });
+            break;
+
+        default:
+            Logger.warn(`Unknown message type: ${request.type}`);
+            sendResponse({
+                status: 'error',
+                message: `Unknown message type: ${request.type}`
+            });
         }
     } catch (error) {
         Logger.logError('message-handler', error, { messageType: request.type });
@@ -885,6 +1186,7 @@ async function toggleDebugMode() {
         debugMode = !debugMode;
         await chrome.storage.local.set({ debugMode });
         Logger.info(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+
         return debugMode;
     } catch (error) {
         Logger.logError('toggle-debug-mode', error);
@@ -929,9 +1231,13 @@ async function handleTestRequest() {
 
     // Test each category with enhanced selector resolver
     const categories = Object.keys(LINKEDIN_SELECTORS);
+
+
     for (const category of categories) {
         try {
             const result = SelectorResolver.findElements(category);
+
+
             testResults.categoriesFound[category] = {
                 elementsFound: result.elements.length,
                 selectorsUsed: result.successfulSelectors.length,
@@ -947,7 +1253,9 @@ async function handleTestRequest() {
 
     // Perform test scan with enhanced error handling
     try {
-        const scanResults = scanAndReplace();
+        const scanResults = await scanAndReplace();
+
+
         testResults.scanResults = {
             totalProcessed: scanResults.totalProcessed,
             successful: scanResults.successfulReplacements,
@@ -978,7 +1286,9 @@ async function handleRescanRequest() {
     Logger.info('Manual rescan requested');
 
     try {
-        const results = scanAndReplace();
+        const results = await scanAndReplace();
+
+
         return {
             status: 'success',
             message: `Rescan completed - processed ${results.totalProcessed} elements`,
@@ -995,3 +1305,132 @@ async function handleRescanRequest() {
         throw error;
     }
 }
+
+/**
+ * Enhanced toggle request handler
+ */
+async function handleToggleRequest() {
+    Logger.info('Toggle extension state requested');
+
+    try {
+        // Get current enabled state
+        const result = await chrome.storage.local.get(['enabled']);
+        const currentState = result.enabled !== false; // Default to enabled if not set
+        const newState = !currentState;
+
+        // Save new state
+        await chrome.storage.local.set({ enabled: newState });
+
+        Logger.info(`Extension toggled from ${currentState} to ${newState}`);
+
+        if (newState) {
+            // Extension was enabled - run scan and set up observer
+            const results = await scanAndReplace();
+
+            // Set up MutationObserver if not already active
+            if (!mutationObserver) {
+                setupMutationObserver();
+            }
+
+            return {
+                status: 'success',
+                message: `Extension enabled - processed ${results.totalProcessed} elements`,
+                enabled: true,
+                processed: results.totalProcessed,
+                successful: results.successfulReplacements,
+                failed: results.failedReplacements
+            };
+        } else {
+            // Extension was disabled - stop observer
+            if (mutationObserver) {
+                mutationObserver.disconnect();
+                mutationObserver = null;
+                Logger.info('MutationObserver disconnected - extension disabled');
+            }
+
+            return {
+                status: 'success',
+                message: 'Extension disabled',
+                enabled: false
+            };
+        }
+    } catch (error) {
+        Logger.logError('toggle-extension', error);
+        throw error;
+    }
+}
+
+/**
+ * Handle AI stats request from popup
+ */
+async function handleGetAIStatsRequest() {
+    Logger.info('AI stats request received');
+
+    try {
+        let stats = {
+            totalAnalyzed: 0,
+            aiDetected: 0,
+            humanDetected: 0,
+            apiCalls: 0,
+            localDetections: 0,
+            errors: 0,
+            cacheHitRate: 0,
+            rateLimitStatus: {
+                requestsThisMinute: 0,
+                maxPerMinute: 30,
+                timeUntilReset: 0
+            }
+        };
+
+        if (aiDetector) {
+            stats = aiDetector.getStats();
+        } else {
+            Logger.warn('AI detector not available for stats');
+        }
+
+        return {
+            status: 'success',
+            message: 'AI stats retrieved successfully',
+            stats: stats,
+            aiDetectionEnabled: aiDetectionEnabled,
+            aiDetectorAvailable: !!aiDetector
+        };
+    } catch (error) {
+        Logger.logError('get-ai-stats', error);
+        throw error;
+    }
+}
+
+/**
+ * Handle cache clear request from popup
+ */
+async function handleClearCacheRequest() {
+    Logger.info('Cache clear request received');
+
+    try {
+        if (aiDetector) {
+            aiDetector.reset();
+            Logger.info('AI detector cache cleared and stats reset');
+        }
+
+        // Also clear processed elements cache
+        performance.processedElements = new WeakSet();
+        performance.replacementCount = 0;
+
+        return {
+            status: 'success',
+            message: 'Cache cleared successfully'
+        };
+    } catch (error) {
+        Logger.logError('clear-cache', error);
+        throw error;
+    }
+}
+
+// Script initialization complete
+console.log('✅ Slop-ify Content Script Loaded Successfully', {
+    url: window.location.href,
+    timestamp: new Date().toISOString(),
+    readyState: document.readyState,
+    aiDetectorLoaded: typeof AIDetector !== 'undefined'
+});
