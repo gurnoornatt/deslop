@@ -12,16 +12,24 @@
   "permissions": [
     "storage",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
-    "*://*.linkedin.com/*"
+    "*://*.linkedin.com/*",
+    "*://*.sapling.ai/*"
   ],
   "content_scripts": [
     {
       "matches": ["*://*.linkedin.com/*"],
-      "js": ["content.js"],
+      "js": ["aiDetector.js", "content.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["aiDetector.js"],
+      "matches": ["*://*.linkedin.com/*"]
     }
   ],
   "background": {

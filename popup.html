@@ -42,6 +42,83 @@
         button:hover {
             background-color: #0052a3;
         }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .toggle-switch.active {
+            background-color: #0066cc;
+        }
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+        .slider-container {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .slider-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 4px 0;
+        }
+        .stats-container {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+        .api-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .api-indicator.active {
+            background-color: #28a745;
+        }
+        .api-indicator.inactive {
+            background-color: #dc3545;
+        }
+        .api-indicator.limited {
+            background-color: #ffc107;
+        }
     </style>
 </head>
 <body>
@@ -54,10 +131,40 @@
         Extension loaded successfully
     </div>
 
+    <!-- Main Enable/Disable Toggle -->
+    <div class="toggle-container">
+        <span><strong>Enable Slop-ify</strong></span>
+        <div class="toggle-switch" id="mainToggle">
+            <div class="toggle-slider"></div>
+        </div>
+    </div>
+
+    <!-- AI Detection Controls -->
+    <div class="toggle-container">
+        <span>AI Detection Only</span>
+        <div class="toggle-switch" id="aiDetectionToggle">
+            <div class="toggle-slider"></div>
+        </div>
+    </div>
+
+    <div class="slider-container" id="thresholdContainer">
+        <div class="slider-label">AI Confidence Threshold: <span id="thresholdValue">65%</span></div>
+        <input type="range" id="aiThreshold" min="50" max="90" value="65">
+    </div>
+
+    <!-- Slop Meter -->
+    <div class="stats-container">
+        <div class="stats-row">
+            <span><strong>🥄 Slop Meter</strong></span>
+            <span id="wordsReplaced">0 words</span>
+        </div>
+    </div>
+
     <button id="testBtn">Test Extension</button>
     <button id="rescanBtn">Rescan Page</button>
+    <button id="testApiBtn">Test API</button>
     <button id="debugBtn">Debug Info</button>
-    <button id="settingsBtn">Settings</button>
+    <button id="clearCacheBtn">Clear Cache</button>
 
     <div id="info" style="margin-top: 16px; font-size: 12px; color: #666;">
         <p>Version 1.0.0</p>
